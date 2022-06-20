@@ -2,9 +2,8 @@ from datetime import datetime
 from http import HTTPStatus
 import re
 import time
-from nameko.rpc import rpc
+from nameko.rpc import rpc, RpcProxy
 import psycopg2
-
 from deps.db import DBProvider
 
 
@@ -12,6 +11,8 @@ class NewsService:
     name = "news_service"
 
     news_model = DBProvider()
+
+    user_rpc = RpcProxy('user_service')
 
     def _response(self, status, data=None, msg=""):
         return {"status": status, "data": data, "message": msg}
@@ -47,28 +48,41 @@ class NewsService:
 
     @rpc
     def create(self, data: dict, user_id: int) -> dict | None:
-        string_date = data['date']
-        if re.match('^\d{2}/\d{2}/\d{4}$', string_date) == None:
-            return self._response(HTTPStatus.BAD_REQUEST, msg="Invalid date string")
+        dt = None
+        try:
+            dt = datetime.strptime(data['date'], '%d/%m/%Y')
+        except ValueError as e:
+            return self._response(HTTPStatus.BAD_REQUEST, msg="Invalid date format, should be: DD/MM/YYYY")
 
-        date_elements = string_date.split('/')
-        date, month, year = date_elements[0], date_elements[1], date_elements[2]
-        d = datetime(int(year), int(month), int(date))
-        unixtime = time.mktime(d.timetuple())
+        unixtime = time.mktime(dt.timetuple())
 
         data['date'] = int(unixtime)
         data['author'] = user_id
         
         news = self.news_model.create(data)
-        if news is psycopg2.Error:
+        if news is Exception:
             return self._response(HTTPStatus.INTERNAL_SERVER_ERROR, msg=news)
-        news.pop('author')
+
+        author = self.user_rpc.get_user(news['author'])
+        if author == None:
+            news['author'] = { "error": "Deleted User" }
+        else:
+            news['author'] = author
+        
         return self._response(HTTPStatus.OK, news)
 
     @rpc
     def update(self, data: dict, id: int) -> dict | None:
-        news = self.news_model.update(data, id)
+        if data.get('date') != None: 
+            dt = None
+            try:
+                dt = datetime.strptime(data['date'], '%d/%m/%Y')
+            except ValueError as e:
+                return self._response(HTTPStatus.BAD_REQUEST, msg="Invalid date format, should be: DD/MM/YYYY")
+            unixtime = time.mktime(dt.timetuple())
+            data['date'] = int(unixtime)
 
+        news = self.news_model.update(data, id)
         if news == None:
             return self._response(HTTPStatus.INTERNAL_SERVER_ERROR)
 

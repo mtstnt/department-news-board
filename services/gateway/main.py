@@ -144,8 +144,9 @@ class GatewayService:
         return ResponseHelper().success({})
 
     @http("DELETE", "/news/<int:news_id>")
-    def delete_news(self, request):
-        pass
+    def delete_news(self, request, news_id):
+        self.news_rpc.delete(news_id)
+        return ResponseHelper().success({})
 
     def _authenticate(self, cookies: dict) -> dict|None:
         print(cookies, flush=True)

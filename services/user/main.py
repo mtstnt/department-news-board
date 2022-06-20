@@ -34,3 +34,10 @@ class UserService:
             return self._response(HTTPStatus.UNAUTHORIZED, msg="Invalid credentials")
 
         return self._response(HTTPStatus.OK, user)
+
+    @rpc 
+    def get_user(self, user_id: int) -> dict:
+        user = self.user_model.get_user(user_id)
+        if user == None:
+            return None
+        return user

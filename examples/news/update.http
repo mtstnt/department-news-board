@@ -1,10 +1,8 @@
-POST /news
+PUT /news/5
 Host: localhost:8000
 Content-Type: application/json
 Cookie: DNB-Auth-Token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTU3NDQ5NzguMDY2MTAzNywidXNlcl9pZCI6MiwidXNlcm5hbWUiOiJNYXR0aGV3In0.0kHAf8V_gLonQ-K5UBVBhHgIzPcLbCIb2t2nNvRQoVQ;
 
 {
-	"title": "Berita 4",
-	"description": "lorem ipsum dolor sit amet mantap",
-	"date": "19/06/2022"
+	"title": "Berita 99"
 }

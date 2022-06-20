@@ -18,6 +18,13 @@ class UserModel:
 			return cur.fetchone()
 		return None
 
+	def find_by_id(self, id: int) -> dict:
+		cur = self.__get_cursor()
+		cur.execute("SELECT * FROM users WHERE id = %s", (id,))
+		if cur.rowcount == 0:
+			return None
+		return cur.fetchone()
+
 	def create_user(self, username: str, password_hashed: str) -> any:
 		try:
 			cur = self.__get_cursor()

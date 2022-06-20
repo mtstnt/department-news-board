@@ -17,6 +17,7 @@ class NewsModel:
         sql = "SELECT * FROM news WHERE status = true"
         if not include_archived:
             sql += " AND archived = false"
+        sql += " ORDER BY date DESC"
         cur.execute(sql)
         result = cur.fetchall()
         return result
@@ -30,12 +31,11 @@ class NewsModel:
         result = cur.fetchone()
         return result
 
-    # TODO
     def create(self, data: dict) -> list[dict]:
         try:
             cur = self.__get_cursor()
             cur.execute(
-                "INSERT INTO news (date, title, description, author) VALUES (%s, %s, %s, %s) RETURNING id, date, title, description",
+                "INSERT INTO news (date, title, description, author) VALUES (%s, %s, %s, %s) RETURNING id, date, title, description, author",
                 (data['date'], data["title"], data["description"], data['author']),
             )
             self.conn.commit()
@@ -47,7 +47,6 @@ class NewsModel:
             print("err:", e, flush=True)
             return e
 
-    # TODO
     def update(self, data: dict, id: int) -> dict:
         try:
             cur = self.__get_cursor()
@@ -56,10 +55,9 @@ class NewsModel:
                 if data.get(cols) != None:
                     updates.append(f"{cols} = %s")
                     params.append(data[cols])
-
             cur.execute(
-                f"UPDATE news SET {','.join(updates)} WHERE id = %d RETURNING id, date, title, description, filename",
-                tuple(*params, id),
+                f"UPDATE news SET {','.join(updates)} WHERE id = %s RETURNING id, date, title, description, filename, author",
+                (*params, id),
             )
             self.conn.commit()
             return cur.fetchone()
@@ -73,7 +71,7 @@ class NewsModel:
     def delete(self, id: int) -> None:
         try:
             cur = self.__get_cursor()
-            cur.execute("UPDATE news SET status = 0 WHERE id = %d", (id,))
+            cur.execute("UPDATE news SET status = false WHERE id = %s", (id,))
             self.conn.commit()
         except pg.OperationalError as e:
             print("pg operational err:", e.pgcode, e.pgerror, flush=True)
@@ -81,7 +79,6 @@ class NewsModel:
         except Exception as e:
             print("err:", e, flush=True)
             return e
-
 
 class DBProvider(DependencyProvider):
     def setup(self):
