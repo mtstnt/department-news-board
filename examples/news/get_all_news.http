@@ -1,0 +1,2 @@
+GET /news
+Host: localhost:8000

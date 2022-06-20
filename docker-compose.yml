@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3.9.17-alpine
+    restart: on-failure
+
+  redis:
+    image: redis:7.0.0-alpine3.16
+    restart: on-failure
+
+  gateway:
+    build: './services/gateway'
+    restart: on-failure
+    volumes:
+      - ./services/gateway:/code
+    depends_on:
+      - rabbitmq
+      - redis
+    ports:
+      - 8000:8000
+
+  user_db:
+    image: postgres:14.3-alpine3.16
+    restart: always
+    environment:
+      POSTGRES_USER: dnb_user
+      POSTGRES_PASSWORD: dnb_user
+      POSTGRES_DB: dnb_user
+      PGDATA: /data/postgres
+    volumes:
+      - ./services/user/pgdata:/data/postgres
+      - ./database/user:/docker-entrypoint-initdb.d/
+    ports:
+      - 5433:5432
+
+  user_service:
+    build: './services/user'
+    depends_on:
+      - rabbitmq
+      - redis
+      - user_db
+    restart: on-failure
+    volumes:
+      - ./services/user:/code
+
+  news_db:
+    image: postgres:14.3-alpine3.16
+    restart: always
+    environment:
+      - POSTGRES_USER=dnb_news
+      - POSTGRES_PASSWORD=dnb_news
+      - POSTGRES_DB=dnb_news
+    volumes:
+      - ./services/news/pgdata:/var/lib/postgresql/data
+      - ./database/news:/docker-entrypoint-initdb.d/
+    ports:
+      - 5434:5432
+
+  news_service:
+    build: './services/news'
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+      - news_db
+    volumes:
+      - ./services/news:/code
+
+  storage_service:
+    build: './services/storage'
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/storage/uploads:/uploads
+      - ./services/storage:/code

@@ -1,0 +1,10 @@
+POST /news
+Host: localhost:8000
+Content-Type: application/json
+Cookie: DNB-Auth-Token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTU3MjQzNzYuNDI5OTkxLCJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6Ik1hdHRoZXcifQ.4ew_NRSXHmoLJ9pjt2LzuvdOf2uOfSkT0rVJQKU25UI;
+
+{
+	"title": "Berita 1",
+	"description": "lorem ipsum dolor sit amet",
+	"date": "20/06/2022"
+}
