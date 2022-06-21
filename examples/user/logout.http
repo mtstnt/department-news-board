@@ -1,0 +1,3 @@
+POST /logout
+Host: localhost:8000
+Cookie: DNB-Auth-Token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTU4NDYzNDQsInVzZXJfaWQiOjIsInVzZXJuYW1lIjoiTWF0dGhldyJ9.B7AMQ6x8v5f986mToEjvB1H6UjVvBH0t_kKWnO25o24;

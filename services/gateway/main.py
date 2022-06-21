@@ -10,6 +10,7 @@ from werkzeug import Request, Response
 
 from deps.response import ResponseHelper
 from deps.jwt import JwtHelper
+from deps.redis import RedisProvider
 
 COOKIE_KEY = 'DNB-Auth-Token'
 
@@ -24,6 +25,8 @@ class GatewayService:
     user_rpc = RpcProxy("user_service")
     news_rpc = RpcProxy("news_service")
     storage_rpc = RpcProxy("storage_service")
+
+    session = RedisProvider()
 
     # Users
     @http("POST", "/login")
@@ -42,6 +45,9 @@ class GatewayService:
         token = JwtHelper().encode(
             {"user_id": rpc_resp['data']['id'], "username": rpc_resp['data']['username']}
         )
+
+        self.session.whitelist_token(token)
+
         resp = ResponseHelper().success({"token": token})
         resp.set_cookie(COOKIE_KEY, token)
         return resp
@@ -62,9 +68,23 @@ class GatewayService:
         token = JwtHelper().encode(
             {"user_id": rpc_resp['data']["id"], "username": rpc_resp['data']["username"]}
         )
+
+        self.session.whitelist_token(token)
+
         resp = ResponseHelper().success({"token": token, "user": rpc_resp['data']}, HTTPStatus.OK)
         resp.set_cookie(COOKIE_KEY, token)
         return resp
+
+    @http('POST', '/logout')
+    def logout(self, request):
+        user = self._authenticate(request.cookies)
+        if user is None:
+            return ResponseHelper().error("Invalid user session", status=HTTPStatus.FORBIDDEN)
+        
+        token = request.cookies.get(COOKIE_KEY)
+        self.session.revoke(token)
+
+        return ResponseHelper().success({})
 
     # News
     @http("GET", "/news")
@@ -84,7 +104,6 @@ class GatewayService:
         return ResponseHelper().success({"news": result["data"]})
 
     # Storage
-    # TODO: Fix
     @http("GET", "/news/<int:news_id>/download")
     def download_news(self, request, news_id: int):
         result = self.news_rpc.download(news_id)
@@ -111,7 +130,6 @@ class GatewayService:
         res.headers.add('Content-Disposition', f'attachment; filename="{new_filename}"')
         return res
 
-    ### TODO: Requires auth
     # Manage news
     @http("POST", "/news")
     def create_news(self, request: Request):
@@ -119,7 +137,7 @@ class GatewayService:
 
         user = self._authenticate(request.cookies)
         if user == None:
-            return ResponseHelper().error(status=HTTPStatus.UNAUTHORIZED)
+            return ResponseHelper().error("Invalid user session", status=HTTPStatus.FORBIDDEN)
 
         data = {
             "date": json_req["date"],
@@ -135,6 +153,10 @@ class GatewayService:
 
     @http("PUT", "/news/<int:news_id>")
     def update_news(self, request: Request, news_id: int):
+        user = self._authenticate(request.cookies)
+        if user == None:
+            return ResponseHelper().error("Invalid user session", status=HTTPStatus.FORBIDDEN)
+
         json_req: dict = request.get_json()
         data = {}
 
@@ -154,6 +176,10 @@ class GatewayService:
 
     @http("PUT", "/news/<int:news_id>/upload")
     def upload_news_attachment(self, request: Request, news_id: int):
+        user = self._authenticate(request.cookies)
+        if user == None:
+            return ResponseHelper().error("Invalid user session", status=HTTPStatus.FORBIDDEN)
+
         file = request.files['attachment']
 
         # Get data from FileStorage
@@ -172,6 +198,10 @@ class GatewayService:
 
     @http("DELETE", "/news/<int:news_id>")
     def delete_news(self, request, news_id):
+        user = self._authenticate(request.cookies)
+        if user == None:
+            return ResponseHelper().error("Invalid user session", status=HTTPStatus.FORBIDDEN)
+
         self.news_rpc.delete(news_id)
         return ResponseHelper().success({})
 
@@ -181,6 +211,9 @@ class GatewayService:
         
         auth_key = cookies.get(COOKIE_KEY)
         if auth_key == None:
+            return None
+
+        if not self.session.check(auth_key):
             return None
             
         auth_vals = JwtHelper().decode(auth_key)
