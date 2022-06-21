@@ -68,6 +68,20 @@ class NewsModel:
             print("err:", e, flush=True)
             return e
 
+    def update_filename(self, filename: str, id: int):
+        try:
+            cur = self.__get_cursor()
+            cur.execute("UPDATE news SET filename = %s WHERE id = %s RETURNING id, title, description, filename, author", (filename, id,))
+            self.conn.commit()
+            return cur.fetchone()
+        except pg.OperationalError as e:
+            print("pg operational err:", e.pgcode, e.pgerror, flush=True)
+            return e
+        except Exception as e:
+            print("err:", e, flush=True)
+            return e
+        
+
     def delete(self, id: int) -> None:
         try:
             cur = self.__get_cursor()

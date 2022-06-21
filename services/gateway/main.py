@@ -1,5 +1,7 @@
+import base64
+import datetime
 from http import HTTPStatus
-import json
+import mimetypes
 from os import stat
 from nameko.web.handlers import http
 from nameko.rpc import RpcProxy
@@ -89,9 +91,27 @@ class GatewayService:
         if result["status"] != HTTPStatus.OK:
             return ResponseHelper().error(result["message"], result["status"])
 
-        return ResponseHelper().make(result["data"], HTTPStatus.OK)
+        filename = result['data']['filename']
+        news_title: str = result['data']['news']['title']
+        news_date = result['data']['news']['date']
 
-    ### Requires auth
+        file_ext = filename.split('.')[-1]
+
+        news_date = datetime.datetime.utcfromtimestamp(news_date).strftime("%d_%m_%Y")
+
+        new_filename = news_title.replace(' ', '_').lower() + "_" + news_date + "." + file_ext
+        binary_data = base64.b64decode(result['data']['b'])
+        content_type, _ = mimetypes.guess_type(filename)
+
+        if content_type == None:
+            content_type = "application/octet-stream" # General purpose
+
+        res = Response(binary_data, HTTPStatus.OK)
+        res.headers.add('Content-Type', content_type)
+        res.headers.add('Content-Disposition', f'attachment; filename="{new_filename}"')
+        return res
+
+    ### TODO: Requires auth
     # Manage news
     @http("POST", "/news")
     def create_news(self, request: Request):
@@ -136,7 +156,14 @@ class GatewayService:
     def upload_news_attachment(self, request: Request, news_id: int):
         file = request.files['attachment']
 
-        news = self.news_rpc.upload(file, news_id)
+        # Get data from FileStorage
+        bytes = file.stream.readlines()
+
+        news = self.news_rpc.upload({
+            "content_type": file.content_type,
+            "mimetype": file.mimetype,
+            "content_data": base64.b64encode(b''.join(bytes)).decode(),
+        }, news_id)
         
         if news["status"] != HTTPStatus.OK:
             return ResponseHelper().error(news["message"], news["status"])
@@ -149,11 +176,13 @@ class GatewayService:
         return ResponseHelper().success({})
 
     def _authenticate(self, cookies: dict) -> dict|None:
-        print(cookies, flush=True)
         if cookies.get(COOKIE_KEY) == None:
             return None
         
         auth_key = cookies.get(COOKIE_KEY)
+        if auth_key == None:
+            return None
+            
         auth_vals = JwtHelper().decode(auth_key)
 
         return auth_vals

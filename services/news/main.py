@@ -1,18 +1,15 @@
 from datetime import datetime
 from http import HTTPStatus
-import re
 import time
 from nameko.rpc import rpc, RpcProxy
-import psycopg2
 from deps.db import DBProvider
-
 
 class NewsService:
     name = "news_service"
 
     news_model = DBProvider()
-
     user_rpc = RpcProxy('user_service')
+    storage_rpc = RpcProxy('storage_service')
 
     def _response(self, status, data=None, msg=""):
         return {"status": status, "data": data, "message": msg}
@@ -20,6 +17,9 @@ class NewsService:
     @rpc
     def get_all_news(self, include_archived=False) -> list[dict]:
         news_list = self.news_model.get_all_news(include_archived)
+        for i in news_list:
+            i['date'] = datetime.utcfromtimestamp(i['date']).strftime("%d/%m/%Y")
+            
         return self._response(HTTPStatus.OK, news_list)
 
     @rpc
@@ -32,10 +32,11 @@ class NewsService:
         filename = news["filename"]
         filecontent = self.storage_rpc.download(filename)
 
-        if filecontent == None:
-            return self._response(HTTPStatus.NOT_FOUND, msg="Not found")
-
-        return self._response(HTTPStatus.OK, filecontent)
+        return self._response(HTTPStatus.OK, {
+            "filename": filename,
+            "b": filecontent,
+            "news": news,
+        })
 
     @rpc
     def get_news(self, id: int) -> dict | None:
@@ -85,6 +86,22 @@ class NewsService:
         news = self.news_model.update(data, id)
         if news == None:
             return self._response(HTTPStatus.INTERNAL_SERVER_ERROR)
+
+        return self._response(HTTPStatus.OK, news)
+
+    @rpc
+    def upload(self, filedata: dict, news_id: int):
+        saved_filename = self.storage_rpc.upload(filedata)
+        news = self.news_model.update_filename(saved_filename, news_id)
+        if news is Exception:
+            return self._response(HTTPStatus.INTERNAL_SERVER_ERROR, news)
+
+        if news.get('author') != None:
+            author = self.user_rpc.get_user(news['author'])
+            if author == None:
+                news['author'] = { "error": "Deleted User" }
+            else:
+                news['author'] = author
 
         return self._response(HTTPStatus.OK, news)
 

@@ -3,3 +3,6 @@
 
 */**/pgdata/*
 !*/**/pgdata/.gitkeep
+
+*/**/uploads/*
+!*/**/uploads/.gitkeep
