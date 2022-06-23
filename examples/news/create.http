@@ -1,10 +1,10 @@
 POST /news
 Host: localhost:8000
 Content-Type: application/json
-Cookie: DNB-Auth-Token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTU4NDYzNDQsInVzZXJfaWQiOjIsInVzZXJuYW1lIjoiTWF0dGhldyJ9.B7AMQ6x8v5f986mToEjvB1H6UjVvBH0t_kKWnO25o24;
+Cookie: DNB-Auth-Token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTU5NjYyNDQsInVzZXJfaWQiOjIsInVzZXJuYW1lIjoiTWF0dGhldyJ9.bsXVNSx19RwGLUqSv5d_1Kq2Z9PZIxOtq4cfSpL5FaE;
 
 {
-	"title": "Berita 1090",
+	"title": "Berita 9999",
 	"description": "lorem ipsum dolor sit amet mantap",
-	"date": "19/09/2022"
+	"date": "19/01/2022"
 }

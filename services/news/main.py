@@ -108,3 +108,7 @@ class NewsService:
     @rpc
     def delete(self, id: int) -> None:
         self.news_model.delete(id)
+
+    @rpc
+    def archive(self) -> None:
+        self.news_model.archive()

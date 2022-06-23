@@ -94,6 +94,14 @@ class NewsModel:
             print("err:", e, flush=True)
             return e
 
+    def archive(self) -> bool:
+        try:
+            cur = self.__get_cursor()
+            cur.execute("UPDATE news SET archived =true WHERE to_timestamp(date) < NOW() - INTERVAL '30 days'")
+            self.conn.commit()
+            return True
+        except pg.OperationalError as e:
+            return e
 class DBProvider(DependencyProvider):
     def setup(self):
         self.conn = ThreadedConnectionPool(

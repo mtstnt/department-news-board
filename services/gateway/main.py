@@ -13,6 +13,7 @@ from deps.jwt import JwtHelper
 from deps.redis import RedisProvider
 
 COOKIE_KEY = 'DNB-Auth-Token'
+ARCHIVAL_API_KEY = 'r3QCkcsjmspt1KLvWxPq5kkekPcXQ3GK'
 
 class GatewayService:
     """
@@ -204,6 +205,19 @@ class GatewayService:
 
         self.news_rpc.delete(news_id)
         return ResponseHelper().success({})
+
+    @http("POST", "/news/archive")
+    def archival_job(self, request):
+        json = request.get_json()
+        if json.get('key') is None:
+            return Response("Key not provided", status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        
+        if json['key'] != ARCHIVAL_API_KEY:
+            return Response("Invalid key", status=HTTPStatus.FORBIDDEN)
+        
+        self.news_rpc.archive()
+        
+        return Response(status=HTTPStatus.OK)
 
     def _authenticate(self, cookies: dict) -> dict|None:
         if cookies.get(COOKIE_KEY) == None:

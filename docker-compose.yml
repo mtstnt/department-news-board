@@ -75,3 +75,11 @@ services:
     volumes:
       - ./services/storage/uploads:/uploads
       - ./services/storage:/code
+
+  archival_job:
+    build: './services/archival_job'
+    restart: on-failure
+    depends_on:
+      - gateway_service
+    volumes:
+      - ./services/archival_job:/code
